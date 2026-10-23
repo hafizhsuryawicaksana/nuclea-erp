@@ -1,4 +1,4 @@
-# NUCLEA ERP — Integrated Development Build (v2.1 · Notification, Email & Live Tracking Update)
+# NUCLEA ERP — Integrated Development Build (v2.1 · UX & Workflow Revision v6)
 
 This archive integrates the original Express/EJS ERP with roadmap modules for manufacturing planning/execution, live batch records, QA history, quarantine inventory, partner qualification, asset change control, Material Requisition, delivery/fleet checks and driver GPS. Existing legacy pages remain available during transition. It is an integration/development build, not a validated production release.
 
@@ -42,12 +42,9 @@ Database table additions are applied by `modules/erp-integrated.js` and `modules
 - Live Tracking App lets assigned drivers share browser GPS for IN_TRANSIT delivery while other authorized ERP users can view active positions. Mobile geolocation over LAN normally requires HTTPS; background browser tracking may be suspended by the operating system.
 - Detailed scope and limitations: [`docs/UX_REVISION_V6.md`](docs/UX_REVISION_V6.md), installation: [`docs/LOCAL_INSTALL_V6.md`](docs/LOCAL_INSTALL_V6.md), and acceptance checks: [`docs/UAT_CHECKLIST_V6.md`](docs/UAT_CHECKLIST_V6.md).
 
-## Account email, role notifications, Live Tracking and GitHub preview
+## UI/UX Rework v7 — "Lead & Cherenkov"
 
-- Notification events are written to user-specific records based on workflow role recipients; users can open the bell dropdown, follow a related module link, mark an item read, or view notification history.
-- SMTP delivery, email verification, email changes and email-based sign-in 2FA are configurable through `SMTP_*` values in `.env`. Development can use terminal OTP fallback; production requires SMTP.
-- Profile/Security has backend routes for password changes, email verification, email changes, notification preferences and 2FA. These functions still require testing against the target SMTP provider and database.
-- Follow [`docs/LIVE_TRACKING_AND_GITHUB.md`](docs/LIVE_TRACKING_AND_GITHUB.md) for phone GPS trial, HTTPS requirements, GitHub collaboration, Codespaces preview and deployment options.
+Seluruh tampilan memakai satu design system: [`public/css/nuclea-ds.css`](public/css/nuclea-ds.css) (token warna, tipografi, shell, tombol, input, tabel, tema gelap). Shell (sidebar timbal, shell bar, login, dashboard) dirombak; route, nama field, dan logika backend tidak berubah. Detail konsep, token, daftar file, dan batas verifikasi: [`docs/UIUX_REWORK_V7.md`](docs/UIUX_REWORK_V7.md).
 
 ## Packaging and environment safety
 
@@ -95,3 +92,7 @@ This is an improved functional development build with newly implemented integrat
 ## Do not overwrite your original source
 
 Keep a backup of your original project. Test this build in a fresh folder and staging database first. If an existing production database is used, back it up and review the table additions and behavior before executing.
+
+## Account, notifications and Live Tracking acceptance testing
+
+See [`docs/NOTIFICATIONS_ACCOUNT_SECURITY_UAT.md`](docs/NOTIFICATIONS_ACCOUNT_SECURITY_UAT.md) for role-based notification, email verification, password reset, 2FA, and Live Tracking test steps. See [`docs/LIVE_TRACKING_AND_GITHUB.md`](docs/LIVE_TRACKING_AND_GITHUB.md) for initial setup and team/GitHub workflow. Always perform acceptance testing on a staging database before operational use.

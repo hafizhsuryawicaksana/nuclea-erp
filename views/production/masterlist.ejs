@@ -7,18 +7,18 @@
     /* ========================================================== */
     
     /* Override DataTables Default Styling */
-    .dataTable-top { display: flex; justify-content: space-between; align-items: center; padding: 0 0 1.5rem 0; border-bottom: 1px dashed var(--kt-sidebar-border); margin-bottom: 1.5rem; }
+    .dataTable-top { display: flex; justify-content: space-between; align-items: center; padding: 0 0 1.5rem 0; border-bottom: 1px solid var(--nu-hair); margin-bottom: 1.5rem; }
     .dataTable-search { width: 320px; }
     .dataTable-input { border-radius: 8px; border: 1px solid var(--kt-sidebar-border); padding: 0.6rem 1rem; width: 100%; font-size: 0.85rem; box-shadow: 0 2px 4px rgba(0,0,0,0.02); background-color: var(--kt-body-bg); color: var(--kt-text-dark); transition: all 0.2s; }
-    .dataTable-input:focus { outline: none; border-color: var(--kt-primary-industrial); box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.2); }
+    .dataTable-input:focus { outline: none; border-color: var(--kt-primary-industrial); box-shadow: 0 0 0 3px var(--nu-focus); }
     .dataTable-info { color: var(--kt-text-muted); font-size: 0.85rem; font-weight: 500; }
-    .dataTable-pagination .active a { background-color: var(--kt-primary-industrial); color: #000 !important; font-weight: 700; border-radius: 6px; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .dataTable-pagination .active a { background-color: var(--kt-primary-industrial); color: var(--nu-on-primary) !important; font-weight: 600; border-radius: var(--r-control); border: none; box-shadow: none; }
     .dataTable-pagination a { border-radius: 6px; border: 1px solid transparent; color: var(--kt-text-dark); padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 500; transition: all 0.2s; }
     .dataTable-pagination a:hover { background-color: var(--kt-body-bg); color: var(--kt-primary-industrial); }
     .dataTable-selector { border-radius: 6px; border: 1px solid var(--kt-sidebar-border); padding: 0.4rem; background-color: var(--kt-body-bg); color: var(--kt-text-dark); }
 
     /* Table Content Styling */
-    .table-enterprise th { background-color: transparent !important; color: var(--kt-text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; border-bottom: 2px solid var(--kt-sidebar-border) !important; padding-bottom: 1rem; }
+    .table-enterprise th { background-color: transparent !important; color: var(--kt-text-muted); font-size: 0.78rem; text-transform: none; letter-spacing: 0; font-weight: 600; border-bottom: 2px solid var(--kt-sidebar-border) !important; padding-bottom: 1rem; }
     .table-enterprise td { font-size: 0.85rem; vertical-align: middle; border-bottom: 1px dashed var(--kt-sidebar-border); padding: 1.2rem 0.5rem; }
     
     /* Isotope Periodic Table Badge */
@@ -30,10 +30,7 @@
     .nav-tabs-custom .nav-link { color: var(--kt-text-muted); font-weight: 600; border: none; border-bottom: 3px solid transparent; padding: 1rem 1.5rem; transition: all 0.3s ease; }
     .nav-tabs-custom .nav-link.active { color: var(--kt-primary-industrial); border-bottom: 3px solid var(--kt-primary-industrial); background: transparent; }
 
-    /* Dark Mode Sync */
-    [data-bs-theme="dark"] .dataTable-input { background-color: #2b2b40; border-color: #4b5675; color: #fff; }
-    [data-bs-theme="dark"] .dataTable-selector { background-color: #2b2b40; border-color: #4b5675; color: #fff; }
-    [data-bs-theme="dark"] .dataTable-pagination a { color: #a1a5b7; }
+    /* Dark mode: handled by the design-system tokens */
 </style>
 
 <div class="app-wrapper">

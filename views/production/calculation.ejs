@@ -23,15 +23,14 @@
 
     .calc-input-group .form-control:focus {
         border-color: var(--kt-primary-industrial);
-        box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.15);
+        box-shadow: 0 0 0 3px var(--nu-focus);
     }
 
     .result-card {
         border: 1px solid var(--kt-sidebar-border);
-        border-radius: 12px;
-        padding: 1.5rem;
-        background: linear-gradient(180deg, var(--kt-card-bg) 0%, var(--kt-body-bg) 100%);
-        transition: all 0.3s ease;
+        border-radius: var(--r-sheet);
+        padding: 1.4rem 1.5rem;
+        background: var(--nu-sheet);
         position: relative;
         overflow: hidden;
     }
@@ -40,27 +39,27 @@
         content: '';
         position: absolute;
         top: 0; left: 0; right: 0;
-        height: 4px;
+        height: 3px;
         background-color: var(--kt-sidebar-border);
     }
 
     .result-card.primary-result::before { background-color: var(--kt-primary-industrial); }
-    .result-card.danger-result::before { background-color: #dc3545; }
-    .result-card.info-result::before { background-color: #0dcaf0; }
+    .result-card.danger-result::before { background-color: var(--st-bad); }
+    .result-card.info-result::before { background-color: var(--ch-400); }
 
     .result-label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 700;
+        font-size: 0.8125rem;
+        font-weight: 600;
         color: var(--kt-text-muted);
         margin-bottom: 0.5rem;
         display: block;
     }
 
     .result-value {
-        font-size: 2.25rem;
-        font-weight: 800;
+        font-family: var(--f-display);
+        font-size: 2.3rem;
+        font-weight: 700;
+        letter-spacing: -.03em;
         line-height: 1;
         color: var(--kt-text-dark);
         margin-bottom: 0.25rem;
@@ -73,19 +72,15 @@
     }
 
     .formula-box {
-        background-color: #f8f9fa;
-        border: 1px dashed #ced4da;
-        border-radius: 8px;
+        background-color: var(--nu-sunken);
+        border: 1px dashed var(--nu-input-line);
+        border-radius: var(--r-control);
         padding: 1rem;
-        font-family: 'Courier New', Courier, monospace;
+        font-family: var(--f-mono);
         font-size: 0.9rem;
     }
 
-    /* Dark Mode Overrides */
-    [data-bs-theme="dark"] .calc-input-group .input-group-text { background-color: #1e1e2d; border-color: #4b5675; }
-    [data-bs-theme="dark"] .calc-input-group .form-control { border-color: #4b5675; background-color: #151521; color: #fff; }
-    [data-bs-theme="dark"] .result-card { background: linear-gradient(180deg, #1e1e2d 0%, #151521 100%); border-color: #2b2b40; }
-    [data-bs-theme="dark"] .formula-box { background-color: #151521; border-color: #4b5675; color: #a1a5b7; }
+    /* Dark mode: handled by the design-system tokens */
 </style>
 
 <div class="app-wrapper">
@@ -400,8 +395,10 @@
         }
 
         const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        const gridColor = isDarkMode ? '#2b2b40' : '#eff2f5';
-        const textColor = isDarkMode ? '#a1a5b7' : '#4b5675';
+        const token = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        const accent = token('--nu-primary') || '#0A76A8';
+        const gridColor = token('--nu-hair') || (isDarkMode ? '#1B2A38' : '#E7EDF1');
+        const textColor = token('--nu-muted') || (isDarkMode ? '#93A7B8' : '#566878');
 
         if (decayChartInstance) {
             decayChartInstance.destroy();
@@ -414,10 +411,10 @@
                 datasets: [{
                     label: 'Activity (mCi)',
                     data: dataPoints,
-                    borderColor: '#ffc107', 
-                    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                    borderColor: accent, 
+                    backgroundColor: accent + '1A',
                     borderWidth: 3,
-                    pointBackgroundColor: '#181C32',
+                    pointBackgroundColor: accent,
                     pointBorderColor: '#fff',
                     pointRadius: 0, 
                     pointHoverRadius: 6,

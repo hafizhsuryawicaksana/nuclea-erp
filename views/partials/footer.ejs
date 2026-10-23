@@ -94,9 +94,7 @@
         if (urlParams.has('success')) {
             Swal.fire({
                 toast: true, position: 'top-end', icon: 'success', title: urlParams.get('success'),
-                showConfirmButton: false, timer: 3000, timerProgressBar: true,
-                background: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#1e1e2d' : '#fff',
-                color: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? '#fff' : '#000'
+                showConfirmButton: false, timer: 3000, timerProgressBar: true
             });
             window.history.replaceState({}, document.title, window.location.pathname);
         }

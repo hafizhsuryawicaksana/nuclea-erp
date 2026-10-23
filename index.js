@@ -208,10 +208,13 @@ app.post('/auth/login', async (req, res) => {
     const browser = req.headers['user-agent'] || 'Unknown Device';
 
     try {
-        const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+        const result = await pool.query('SELECT * FROM users WHERE lower(email) = lower($1)', [String(email || '').trim()]);
         const user = result.rows[0];
 
-        // Verifikasi Kredensial
+        if (user && String(user.account_status || 'ACTIVE').toUpperCase() === 'PENDING') {
+            return res.redirect('/auth/login?error=' + encodeURIComponent('Your account is awaiting administrator activation.'));
+        }
+        // Verify credentials. Non-active accounts cannot open a session.
         if (user && String(user.account_status || 'ACTIVE').toUpperCase() === 'ACTIVE' && verifyPassword(password, user.password)) {
             if (!String(user.password || '').startsWith('scrypt$')) {
                 const upgradedHash = hashPassword(password);
@@ -221,6 +224,7 @@ app.post('/auth/login', async (req, res) => {
             // Cek 2FA
             if (user.is_2fa_enabled) {
                 const otp = crypto.randomInt(100000, 1000000).toString();
+                req.session.remember_me = req.body.remember_me === 'on';
                 req.session.pending_2fa_user = user;
                 req.session.login_otp_hash = crypto.createHash('sha256').update(otp).digest('hex');
                 req.session.login_otp_expires_at = Date.now() + 10 * 60 * 1000;
@@ -243,6 +247,8 @@ app.post('/auth/login', async (req, res) => {
             // Catat Audit Trail
             await pool.query('INSERT INTO login_trails (user_id, device_ip, browser_info, status) VALUES ($1, $2, $3, $4)', [user.id, ip, browser, 'SUCCESS']);
             req.session.user = user;
+            req.session.cookie.maxAge = req.body.remember_me === 'on' ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+            req.session.authenticated_at = Date.now();
             res.redirect('/');
         } else {
             if(user) await pool.query('INSERT INTO login_trails (user_id, device_ip, browser_info, status) VALUES ($1, $2, $3, $4)', [user.id, ip, browser, 'FAILED']);
@@ -281,6 +287,9 @@ app.post('/auth/verify-2fa', async (req, res) => {
         const user = req.session.pending_2fa_user;
         await pool.query('INSERT INTO login_trails (user_id, device_ip, browser_info, status) VALUES ($1, $2, $3, $4)', [user.id, ip, browser, 'SUCCESS (2FA)']);
         req.session.user = user;
+        req.session.cookie.maxAge = req.session.remember_me ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+        req.session.authenticated_at = Date.now();
+        delete req.session.remember_me;
         delete req.session.pending_2fa_user;
         delete req.session.login_otp_hash;
         delete req.session.login_otp_expires_at;
@@ -297,16 +306,99 @@ app.post('/auth/verify-2fa', async (req, res) => {
     }
 });
 
+// Password reset by short-lived code sent to the registered address.
+app.get('/auth/forgot-password', (req, res) => {
+    res.render('forgot-password', { query: req.query });
+});
+
+app.post('/auth/forgot-password/request', async (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    try {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) {
+            return res.redirect('/auth/forgot-password?sent=1');
+        }
+        const userResult = await pool.query("SELECT id,email,account_status FROM users WHERE lower(email)=lower($1) LIMIT 1", [email]);
+        const account = userResult.rows[0];
+        // Always use the same response to avoid revealing which email addresses are registered.
+        if (account && String(account.account_status || 'ACTIVE').toUpperCase() === 'ACTIVE') {
+            const otp = crypto.randomInt(100000, 1000000).toString();
+            let canSend = false;
+            if (notificationService.smtpConfigured()) {
+                await notificationService.sendEmail(account.email, 'Reset your NUCLEA ERP password', `Your password reset code is ${otp}. It expires in 10 minutes. If you did not request this, ignore this email.`);
+                canSend = true;
+            } else if (process.env.NODE_ENV !== 'production') {
+                console.warn(`[Development password reset code] ${account.email}: ${otp}`);
+                canSend = true;
+            }
+            if (canSend) {
+                await pool.query(`UPDATE users SET password_reset_hash=$1,password_reset_expires_at=now()+interval '10 minutes',password_reset_attempts=0 WHERE id=$2`, [crypto.createHash('sha256').update(otp).digest('hex'), account.id]);
+            } else {
+                console.error('Password reset requested but SMTP is not configured.');
+            }
+        }
+        res.redirect('/auth/forgot-password?sent=1');
+    } catch (error) {
+        console.error('Password reset request failed:', error.message);
+        res.redirect('/auth/forgot-password?sent=1');
+    }
+});
+
+app.post('/auth/forgot-password/confirm', async (req, res) => {
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const otp = String(req.body.otp || '').trim();
+    const newPassword = String(req.body.new_password || '');
+    try {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !/^\d{6}$/.test(otp)) throw new Error('Enter the registered email and 6-digit reset code.');
+        if (newPassword.length < 10 || !/[a-z]/.test(newPassword) || !/[A-Z]/.test(newPassword) || !/\d/.test(newPassword)) {
+            throw new Error('Use at least 10 characters with an uppercase letter, a lowercase letter and a number.');
+        }
+        const userResult = await pool.query(`SELECT id,email,password,password_reset_hash,password_reset_expires_at,password_reset_attempts,account_status FROM users WHERE lower(email)=lower($1) LIMIT 1`, [email]);
+        const account = userResult.rows[0];
+        if (!account || String(account.account_status || 'ACTIVE').toUpperCase() !== 'ACTIVE' || !account.password_reset_hash || !account.password_reset_expires_at || new Date(account.password_reset_expires_at) <= new Date() || Number(account.password_reset_attempts || 0) >= 5) {
+            throw new Error('The reset code is invalid or expired. Request a new code.');
+        }
+        const providedHash = crypto.createHash('sha256').update(otp).digest('hex');
+        const expectedHash = String(account.password_reset_hash);
+        const matches = expectedHash.length === providedHash.length && crypto.timingSafeEqual(Buffer.from(expectedHash), Buffer.from(providedHash));
+        if (!matches) {
+            const nextAttempts = Number(account.password_reset_attempts || 0) + 1;
+            await pool.query(`UPDATE users SET password_reset_attempts=$1,password_reset_hash=CASE WHEN $1>=5 THEN NULL ELSE password_reset_hash END,password_reset_expires_at=CASE WHEN $1>=5 THEN NULL ELSE password_reset_expires_at END WHERE id=$2`, [nextAttempts, account.id]);
+            throw new Error(nextAttempts >= 5 ? 'Too many attempts. Request a new reset code.' : 'The reset code is incorrect.');
+        }
+        if (verifyPassword(newPassword, account.password)) throw new Error('Choose a new password different from your current password.');
+        await pool.query(`UPDATE users SET password=$1,password_updated_at=now(),password_reset_hash=NULL,password_reset_expires_at=NULL,password_reset_attempts=0 WHERE id=$2`, [hashPassword(newPassword), account.id]);
+        await pool.query("INSERT INTO login_trails(user_id,device_ip,browser_info,status) VALUES($1,$2,$3,'PASSWORD_RESET')", [account.id, String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').slice(0,50), String(req.headers['user-agent'] || '').slice(0,255)]);
+        if (notificationService.smtpConfigured()) {
+            await notificationService.sendEmail(account.email, 'Your NUCLEA ERP password was reset', 'Your password was changed successfully. If you did not do this, contact your system administrator immediately.').catch(err => console.error('Password reset alert email failed:', err.message));
+        }
+        res.redirect('/auth/login?status=password-reset-success');
+    } catch (error) {
+        res.status(400).render('forgot-password', { query: { error: error.message } });
+    }
+});
+
 app.get('/auth/signup', (req, res) => { res.render('signup', { error: null, query: req.query }); });
 
 app.post('/auth/signup', async (req, res) => {
-    const { first_name, last_name, email, password, role } = req.body;
-    const full_name = last_name ? `${first_name} ${last_name}` : first_name;
+    const firstName = String(req.body.first_name || '').trim();
+    const lastName = String(req.body.last_name || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
+    const full_name = [firstName, lastName].filter(Boolean).join(' ').slice(0, 255);
     try {
-        await pool.query("INSERT INTO users (full_name, email, password, role) VALUES ($1, $2, $3, 'Pending User')", [full_name, email, hashPassword(password)]);
+        if (full_name.length < 2) throw new Error('Enter your name.');
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) throw new Error('Enter a valid email address.');
+        if (password.length < 8) throw new Error('Password must contain at least 8 characters.');
+        const inserted = await pool.query("INSERT INTO users (full_name, email, password, role, account_status, is_email_verified) VALUES ($1, $2, $3, 'Pending User', 'PENDING', FALSE) RETURNING id", [full_name, email, hashPassword(password)]);
+        await notificationService.notifyRoles(['system administrator', 'administrator', 'admin'], {
+            title: 'New account awaiting approval',
+            message: `${full_name} registered with ${email}. Assign a role and activate the account in Security Control.`,
+            type: 'approval', actionUrl: '/security-control?tab=users', source: 'SECURITY_CONTROL',
+            relatedType: 'USER', relatedId: inserted.rows[0].id
+        });
         res.redirect('/auth/login?status=success');
-    } catch (err) { 
-        res.render('signup', { error: "Registrasi gagal. Email mungkin sudah terdaftar.", query: req.query }); 
+    } catch (err) {
+        res.status(400).render('signup', { error: err.message || 'Registration failed. The email may already be registered.', query: req.query });
     }
 });
 
@@ -659,6 +751,10 @@ app.post('/production/schedule/add', isAuthenticated, async (req, res) => {
         }
 
         await pool.query('COMMIT');
+        await notificationService.notifyRoles(['production', 'manufacturing'], {
+            title: 'Production batch scheduled', message: `Batch ${batch_number} is scheduled for ${production_date} at ${calib_time || 'the planned calibration time'}.`,
+            type: 'approval', actionUrl: '/production/schedule', source: 'MANUFACTURING', relatedType: 'WORK_ORDER', relatedId: batch_number
+        }, [req.session.user.id]);
         res.redirect('/production/schedule?success=Batch+Berhasil+Dijadwalkan+dan+Tersimpan+ke+Database');
     } catch (err) {
         await pool.query('ROLLBACK');
@@ -771,6 +867,10 @@ app.post('/scm/inventory/qa-release/:id', isAuthenticated, async (req, res) => {
             VALUES($1,$2,'QC_RELEASE_RECEIPT',$3,'MATERIAL_BATCH',$4,'Stock recognized after QC release',$5,$6)`, [batch.material_id, batch.id, batch.qty, batch.batch_number, user.id, user.full_name]);
         await integratedERP.audit(client, req, 'MATERIAL_QA_RELEASED', 'MATERIAL_BATCH', batchId, 'QC release after PIN re-authentication', {status:'QUARANTINE'}, {status:'UNRESTRICTED', quantity:batch.qty});
         await client.query('COMMIT');
+        await notificationService.notifyRoles(['scm', 'supply chain', 'production'], {
+            title: 'Material lot released', message: `Lot ${batch.batch_number} has passed release and is now available for authorized stock allocation.`,
+            type: 'success', actionUrl: '/scm/inventory', source: 'INVENTORY', relatedType: 'MATERIAL_BATCH', relatedId: batch.id
+        }, [req.session.user.id]);
         res.redirect('/scm/inventory?success=Batch+dirilis+ke+stock+terkendali');
     } catch (err) {
         await client.query('ROLLBACK');
@@ -822,21 +922,35 @@ app.get('/procurement/pr', isAuthenticated, async (req, res) => {
 
 app.post('/procurement/pr/add', isAuthenticated, async (req, res) => {
     const { pr_number, request_date, department, item_name, specification, quantity, uom, est_unit_price, vendor_id, purpose } = req.body;
-    const totalPrice = parseFloat(quantity) * parseFloat(est_unit_price);
+    const qty = Number(quantity), unitPrice = Number(est_unit_price);
+    const totalPrice = qty * unitPrice;
     const vId = vendor_id ? vendor_id : null;
     try {
-        await pool.query(
-            `INSERT INTO purchase_requisitions (pr_number, request_date, department, item_name, specification, quantity, uom, est_unit_price, total_price, vendor_id, purpose, status) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'WAITING_FINANCE_APPROVAL')`,
-            [pr_number, request_date, department, item_name, specification, quantity, uom, est_unit_price, totalPrice, vId, purpose]
+        if (!String(pr_number || '').trim() || !String(item_name || '').trim() || !Number.isFinite(qty) || qty <= 0 || !Number.isFinite(unitPrice) || unitPrice < 0) throw new Error('Enter a valid PR number, item, quantity and unit price.');
+        const created = await pool.query(
+            `INSERT INTO purchase_requisitions (pr_number, request_date, department, item_name, specification, quantity, uom, est_unit_price, total_price, vendor_id, purpose, status, requested_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'WAITING_FINANCE_APPROVAL', $12) RETURNING id`,
+            [pr_number, request_date || null, department, item_name, specification, qty, uom, unitPrice, totalPrice, vId, purpose, req.session.user.id]
         );
+        await notificationService.notifyRoles(['finance', 'director', 'procurement manager', 'purchasing manager'], {
+            title: 'Purchase requisition awaiting approval',
+            message: `PR ${pr_number} for ${item_name} was submitted by ${req.session.user.full_name}.`,
+            type: 'approval', actionUrl: '/procurement/pr', source: 'PROCUREMENT', relatedType: 'PURCHASE_REQUISITION', relatedId: created.rows[0].id
+        }, [req.session.user.id]);
         res.redirect('/procurement/pr?success=Purchase+Requisition+Submitted+for+Approval');
     } catch (err) { res.redirect('/procurement/pr?error=' + encodeURIComponent(err.message)); }
 });
 
 app.post('/procurement/pr/approve/:id', isAuthenticated, async (req, res) => {
     try {
-        await pool.query(`UPDATE purchase_requisitions SET status = 'APPROVED_BY_DIRECTOR' WHERE id = $1`, [req.params.id]);
+        const role = String(req.session.user.role || '');
+        if (!/admin|system administrator|director|finance|procurement manager|purchasing manager/i.test(role)) throw new Error('Your role cannot approve purchase requisitions.');
+        const result = await pool.query(`UPDATE purchase_requisitions SET status = 'APPROVED_BY_DIRECTOR' WHERE id = $1 AND status = 'WAITING_FINANCE_APPROVAL' RETURNING *`, [req.params.id]);
+        if (!result.rows.length) throw new Error('PR not found or it has already been processed.');
+        const pr = result.rows[0];
+        if (pr.requested_by) await notificationService.notifyUser(pr.requested_by, {
+            title: 'Purchase requisition approved', message: `PR ${pr.pr_number} was approved.`, type: 'success', actionUrl: '/procurement/pr', source: 'PROCUREMENT', relatedType: 'PURCHASE_REQUISITION', relatedId: pr.id
+        });
         res.redirect('/procurement/pr?success=PR+Successfully+Approved');
     } catch (err) { res.redirect('/procurement/pr?error=' + encodeURIComponent(err.message)); }
 });
@@ -851,18 +965,32 @@ app.get('/procurement/msr', isAuthenticated, async (req, res) => {
 app.post('/procurement/msr/add', isAuthenticated, async (req, res) => {
     const { req_number, department, item_description, quantity, uom, required_date, justification } = req.body;
     try {
-        await pool.query(
-            `INSERT INTO requisitions (req_number, department, item_description, quantity, uom, required_date, justification, status) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING_APPROVAL')`,
-            [req_number, department, item_description, quantity, uom, required_date, justification]
+        const qty = Number(quantity);
+        if (!String(req_number || '').trim() || !String(item_description || '').trim() || !Number.isFinite(qty) || qty <= 0) throw new Error('Enter a request number, item and a positive quantity.');
+        const created = await pool.query(
+            `INSERT INTO requisitions (req_number, department, item_description, quantity, uom, required_date, justification, status, requested_by)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING_APPROVAL', $8) RETURNING id`,
+            [req_number, department, item_description, qty, uom, required_date || null, justification, req.session.user.id]
         );
+        await notificationService.notifyRoles(['scm', 'supply chain', 'warehouse manager', 'procurement manager'], {
+            title: 'Material requisition awaiting review',
+            message: `Request ${req_number} for ${item_description} was submitted by ${req.session.user.full_name}.`,
+            type: 'approval', actionUrl: '/procurement/msr', source: 'PROCUREMENT', relatedType: 'MATERIAL_REQUISITION', relatedId: created.rows[0].id
+        }, [req.session.user.id]);
         res.redirect('/procurement/msr?success=Material+Requisition+Created');
     } catch (err) { res.redirect('/procurement/msr?error=' + encodeURIComponent(err.message)); }
 });
 
 app.post('/procurement/msr/approve/:id', isAuthenticated, async (req, res) => {
     try {
-        await pool.query(`UPDATE requisitions SET status = 'APPROVED' WHERE id = $1`, [req.params.id]);
+        const role = String(req.session.user.role || '');
+        if (!/admin|system administrator|scm manager|supply chain manager|warehouse manager|plant manager|procurement manager/i.test(role)) throw new Error('Your role cannot approve material requisitions.');
+        const result = await pool.query(`UPDATE requisitions SET status = 'APPROVED' WHERE id = $1 AND status = 'PENDING_APPROVAL' RETURNING *`, [req.params.id]);
+        if (!result.rows.length) throw new Error('Request not found or it has already been processed.');
+        const mr = result.rows[0];
+        if (mr.requested_by) await notificationService.notifyUser(mr.requested_by, {
+            title: 'Material requisition approved', message: `Request ${mr.req_number} was approved.`, type: 'success', actionUrl: '/procurement/msr', source: 'PROCUREMENT', relatedType: 'MATERIAL_REQUISITION', relatedId: mr.id
+        });
         res.redirect('/procurement/msr?success=MSR+Approved');
     } catch (err) { res.redirect('/procurement/msr?error=' + encodeURIComponent(err.message)); }
 });
@@ -981,10 +1109,12 @@ const syncDatabase = async () => {
             ALTER TABLE purchase_requisitions ADD COLUMN IF NOT EXISTS uom VARCHAR(50);
             ALTER TABLE purchase_requisitions ADD COLUMN IF NOT EXISTS est_unit_price NUMERIC;
             ALTER TABLE purchase_requisitions ADD COLUMN IF NOT EXISTS purpose TEXT;
+            ALTER TABLE purchase_requisitions ADD COLUMN IF NOT EXISTS requested_by INTEGER REFERENCES users(id);
             
             ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS uom VARCHAR(20);
             ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS required_date DATE;
             ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS justification TEXT;
+            ALTER TABLE requisitions ADD COLUMN IF NOT EXISTS requested_by INTEGER REFERENCES users(id);
 
             -- MIGRATION KHUSUS MENU SCHEDULE --
             ALTER TABLE productions ADD COLUMN IF NOT EXISTS production_date DATE;

@@ -65,6 +65,9 @@ function createNotificationService(pool) {
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_hash VARCHAR(128);
       ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verification_expires_at TIMESTAMPTZ;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS password_updated_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_hash VARCHAR(128);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at TIMESTAMPTZ;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_attempts INTEGER NOT NULL DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS session_activity_seconds BIGINT NOT NULL DEFAULT 0;
       ALTER TABLE users ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ;
     `);

@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
-    "check": "node --check index.js && node --check modules/erp-integrated.js && node --check modules/roadmap-erp.js && node --check modules/notification-service.js && node scripts/check-ejs.js",
+    "check": "node --check index.js && node --check modules/notification-service.js && node --check modules/erp-integrated.js && node --check modules/roadmap-erp.js && node scripts/check-ejs.js",
     "test": "npm run check && node scripts/check-notifications.js"
   },
   "keywords": [

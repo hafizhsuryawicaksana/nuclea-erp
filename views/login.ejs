@@ -156,6 +156,11 @@
             <span class="fw-medium">Registration successful! You may now log in.</span>
         </div>
     <% } %>
+    <% if (typeof query !== 'undefined' && query.status === 'password-reset-success') { %>
+        <div class="alert alert-custom-success d-flex align-items-center p-3 mb-4 rounded-3 small" role="status">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i><span class="fw-medium">Password reset successfully. You can sign in with your new password.</span>
+        </div>
+    <% } %>
 
     <form action="/auth/login" method="POST">
         
@@ -174,12 +179,12 @@
 
         <div class="d-flex justify-content-between align-items-center mt-3 mb-4 small">
             <div class="form-check m-0 d-flex align-items-center">
-                <input class="form-check-input shadow-none mt-0 me-2" type="checkbox" id="rememberMe" style="width: 16px; height: 16px;">
+                <input class="form-check-input shadow-none mt-0 me-2" type="checkbox" id="rememberMe" name="remember_me" style="width: 16px; height: 16px;">
                 <label class="form-check-label fw-medium text-secondary" for="rememberMe" style="cursor: pointer;">
                     Remember me
                 </label>
             </div>
-            <a href="#" class="auth-link">Forgot Password?</a>
+            <a href="/auth/forgot-password" class="auth-link">Forgot Password?</a>
         </div>
 
         <button type="submit" class="btn-submit">Log in</button>

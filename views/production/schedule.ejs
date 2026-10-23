@@ -3,22 +3,22 @@
 
 <style>
     /* Typography & Colors */
-    .text-slate { color: #64748b; }
+    .text-slate { color: var(--nu-muted); }
     
     /* Calendar Grid - UX Professional (Modern SaaS) */
-    .cal-grid th { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; border-bottom: 2px solid #e2e8f0; }
-    .cal-grid td { height: 110px; vertical-align: top; padding: 0.5rem; border-color: #e2e8f0; transition: background-color 0.2s; }
-    .cal-grid td:hover { background-color: #f8fafc; }
+    .cal-grid th { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--nu-muted); border-bottom: 2px solid var(--nu-line); }
+    .cal-grid td { height: 110px; vertical-align: top; padding: 0.5rem; border-color: var(--nu-line); transition: background-color 0.2s; }
+    .cal-grid td:hover { background-color: var(--nu-sunken); }
     
     /* Active Date Styling */
-    .cal-date-number { font-weight: 600; font-size: 0.85rem; color: #334155; display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; }
-    .today-cell .cal-date-number { background-color: #2563eb; color: white; }
+    .cal-date-number { font-weight: 600; font-size: 0.85rem; color: var(--nu-ink); display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; }
+    .today-cell .cal-date-number { background-color: var(--nu-primary); color: white; }
 
     /* Calendar Event Badge */
     .cal-event { 
-        background-color: #eff6ff; 
-        border: 1px solid #bfdbfe; 
-        border-left: 3px solid #3b82f6; 
+        background-color: var(--nu-primary-soft); 
+        border: 1px solid var(--st-info-line); 
+        border-left: 3px solid var(--nu-primary); 
         border-radius: 6px; 
         padding: 6px 8px; 
         margin-top: 4px;
@@ -26,26 +26,26 @@
         transition: all 0.2s;
     }
     .cal-event:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-    .cal-event-title { font-size: 0.75rem; font-weight: 700; color: #1d4ed8; font-family: monospace;}
-    .cal-event-time { font-size: 0.7rem; font-weight: 600; color: #64748b; }
-    .cal-event-desc { font-size: 0.7rem; color: #475569; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .cal-event-title { font-size: 0.75rem; font-weight: 700; color: var(--tx-info); font-family: var(--f-mono);}
+    .cal-event-time { font-size: 0.7rem; font-weight: 600; color: var(--nu-muted); }
+    .cal-event-desc { font-size: 0.7rem; color: var(--nu-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* Timeline Hub - Clean & Elegant */
     .timeline-container { position: relative; padding-left: 1.5rem; margin-top: 0.5rem; }
-    .timeline-line { position: absolute; left: 0.35rem; top: 1.5rem; bottom: 0; width: 2px; background-color: #e2e8f0; }
+    .timeline-line { position: absolute; left: 0.35rem; top: 1.5rem; bottom: 0; width: 2px; background-color: var(--nu-line); }
     .timeline-item { position: relative; margin-bottom: 1.5rem; }
-    .timeline-node { position: absolute; left: -1.5rem; top: 0.7rem; width: 12px; height: 12px; border-radius: 50%; background-color: #3b82f6; border: 2px solid white; box-shadow: 0 0 0 2px #eff6ff; z-index: 2; }
+    .timeline-node { position: absolute; left: -1.5rem; top: 0.7rem; width: 12px; height: 12px; border-radius: 50%; background-color: var(--nu-primary); border: 2px solid white; box-shadow: 0 0 0 2px var(--nu-primary-soft); z-index: 2; }
     
     /* Accordion Card */
-    .run-card { border: 1px solid #e2e8f0; border-radius: 8px; background: white; transition: box-shadow 0.2s; }
+    .run-card { border: 1px solid var(--nu-line); border-radius: 8px; background: white; transition: box-shadow 0.2s; }
     .run-card-header { padding: 1rem; cursor: pointer; border-radius: 8px; }
-    .run-card-header:hover { background-color: #f8fafc; }
-    .run-badge { background-color: #f1f5f9; color: #334155; font-family: monospace; font-size: 0.75rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid #e2e8f0; }
+    .run-card-header:hover { background-color: var(--nu-sunken); }
+    .run-badge { background-color: var(--nu-hair); color: var(--nu-ink); font-family: var(--f-mono); font-size: 0.75rem; font-weight: 600; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--nu-line); }
     
     /* Custom Form Modals */
-    .custom-form-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #64748b; letter-spacing: 0.02em; }
-    .custom-input { border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem; padding: 0.6rem 0.75rem; }
-    .custom-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); outline: none; }
+    .custom-form-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--nu-muted); letter-spacing: 0.02em; }
+    .custom-input { border: 1px solid var(--nu-input-line); border-radius: 6px; font-size: 0.9rem; padding: 0.6rem 0.75rem; }
+    .custom-input:focus { border-color: var(--nu-primary); box-shadow: 0 0 0 3px var(--nu-primary-soft); outline: none; }
 </style>
 
 <div class="app-wrapper">
@@ -60,7 +60,7 @@
                 <h4 class="fw-bold text-dark mb-1">Production Planning & Schedule</h4>
                 <p class="text-slate small mb-0">Master calendar for Cyclotron runs, target hospital allocations, and half-life tracking.</p>
             </div>
-            <button class="btn fw-bold px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addBatchModal" style="background-color: #1e293b; color: white;">
+            <button class="btn fw-bold px-4 py-2 rounded-3 shadow-sm" data-bs-toggle="modal" data-bs-target="#addBatchModal" style="background-color: var(--lead-800); color: #fff;">
                 <i class="bi bi-plus-lg text-warning me-2"></i>Add Production Batch
             </button>
         </div>
@@ -332,10 +332,10 @@
                 if (i === 0 && j < firstDay) {
                     let prevDay = daysInPrevMonth - firstDay + j + 1;
                     cell.innerHTML = `<span class="text-muted opacity-50">${prevDay}</span>`;
-                    cell.style.backgroundColor = '#f8fafc';
+                    cell.style.backgroundColor = 'var(--nu-sunken)';
                 } else if (dateCounter > daysInMonth) {
                     cell.innerHTML = `<span class="text-muted opacity-50">${nextMonthDate++}</span>`;
-                    cell.style.backgroundColor = '#f8fafc';
+                    cell.style.backgroundColor = 'var(--nu-sunken)';
                 } else {
                     let isToday = isCurrentMonthYear && dateCounter === today.getDate();
                     if(isToday) cell.classList.add("today-cell");

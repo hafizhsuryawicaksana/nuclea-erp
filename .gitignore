@@ -7,8 +7,3 @@ Thumbs.db
 private_uploads/
 coverage/
 npm-debug.log*
-
-public/uploads/
-*.dump
-*.backup
-*.bak
