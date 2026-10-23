@@ -42,3 +42,42 @@
     <div class="sidebar-footer mt-auto pt-3"><a href="/auth/logout" class="menu-link-color text-danger"><i class="bi bi-box-arrow-left"></i><span>Sign out</span></a></div>
   </div>
 </aside>
+<style>
+/* Sidebar theme follows the active application theme. */
+[data-bs-theme="dark"] #appSidebar,
+.dark-mode #appSidebar {
+  background: #101b2a !important;
+  color: #c7d3e2 !important;
+  border-color: #26364a !important;
+  box-shadow: 2px 0 14px rgba(0, 0, 0, .16) !important;
+}
+[data-bs-theme="dark"] #appSidebar .sidebar-brand,
+.dark-mode #appSidebar .sidebar-brand {
+  background: #101b2a !important;
+  border-color: #26364a !important;
+}
+[data-bs-theme="dark"] #appSidebar .menu-link-color,
+.dark-mode #appSidebar .menu-link-color {
+  color: #b7c5d8 !important;
+}
+[data-bs-theme="dark"] #appSidebar .menu-link-color:hover,
+[data-bs-theme="dark"] #appSidebar .menu-link-color.active,
+.dark-mode #appSidebar .menu-link-color:hover,
+.dark-mode #appSidebar .menu-link-color.active {
+  color: #eaf4ff !important;
+  background: #1c344b !important;
+}
+[data-bs-theme="dark"] #appSidebar .menu-section,
+.dark-mode #appSidebar .menu-section {
+  color: #7f96b2 !important;
+}
+[data-bs-theme="dark"] #appSidebar .app-logo,
+.dark-mode #appSidebar .app-logo {
+  opacity: .78;
+  filter: brightness(.78) saturate(.82);
+}
+[data-bs-theme="dark"] #appSidebar .sidebar-content,
+.dark-mode #appSidebar .sidebar-content {
+  scrollbar-color: #34465d #101b2a;
+}
+</style>
